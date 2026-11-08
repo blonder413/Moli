@@ -1,0 +1,27 @@
+info:
+  name: Create
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: localhost:3000/watched-movies
+  body:
+    type: json
+    data: |-
+      {
+        "userId": "1",
+        "tmdbId": 155,
+        "isWatched": true,
+        "watchedAt": "2026-11-02",
+        "chosenPlatform": "netflix",
+        "personalRating": 5
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

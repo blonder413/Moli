@@ -1,0 +1,23 @@
+info:
+  name: Detail User
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: http://localhost:3000/watched-movies/user/usuario_local_1?page=1&search=supergirl
+  params:
+    - name: page
+      value: "1"
+      type: query
+    - name: search
+      value: supergirl
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
