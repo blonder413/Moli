@@ -47,7 +47,7 @@ export class WatchedMoviesService {
   async getExternalMovieDetails(
     tmdbId: number,
   ): Promise<TmdbMovieDetailResponse> {
-    const url = `${this.tmdbApiUrl}/3/movie/${tmdbId}?language=es-MX&append_to_response=videos,watch/providers`;
+    const url = `${this.tmdbApiUrl}/3/movie/${tmdbId}?language=es-MX&append_to_response=videos,watch/providers,release_dates,credits`;
 
     const response = await axios.get(url, {
       headers: {
