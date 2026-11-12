@@ -27,6 +27,15 @@ const DetailModal = ({ tmdbId, onClose }: DetailModalProps) => {
     loadAdvancedData();
   }, [tmdbId]);
 
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -61,41 +70,57 @@ const DetailModal = ({ tmdbId, onClose }: DetailModalProps) => {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col md:flex-row animate-fade-in">
-        {/* Botón de Cerrar */}
+      {/* Contenedor principal en columna (flex-col) para lucir el banner horizontal */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative flex flex-col animate-fade-in">
+        {/* Botón de Cerrar flotante con fondo translúcido */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-white rounded-full p-2 z-10 cursor-pointer transition-colors"
+          className="absolute top-4 right-4 bg-slate-950/70 hover:bg-slate-800 text-white rounded-full w-8 h-8 flex items-center justify-center z-20 cursor-pointer transition-colors backdrop-blur-md border border-slate-700/50"
           aria-label="Cerrar modal"
         >
           ✕
         </button>
 
-        {/* Panel Izquierdo: Imagen del Póster */}
-        <div className="w-full md:w-1/3 bg-slate-950 aspect-[2/3] md:aspect-auto">
-          {detail.poster_path ? (
+        {/* 👇 BANNER SUPERIOR PANORÁMICO (16:9) CON BACKDROP_PATH */}
+        <div className="relative w-full aspect-video max-h-[300px] bg-slate-950 overflow-hidden shrink-0">
+          {detail.backdrop_path ? (
+            <>
+              <img
+                src={`https://image.tmdb.org/t/p/w780${detail.backdrop_path}`}
+                alt={detail.title}
+                className="w-full h-full object-cover"
+              />
+              {/* Degradado inferior para fundir la imagen con el contenido oscuro */}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
+            </>
+          ) : detail.backdrop_path ? (
+            /* Respaldo por si la película no tiene imagen horizontal */
             <img
               src={`https://image.tmdb.org/t/p/w500${detail.poster_path}`}
               alt={detail.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover opacity-40 blur-sm"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs">
-              Sin Póster
+              Sin imagen de fondo
             </div>
           )}
-        </div>
 
-        {/* Panel Derecho: Cuerpo de Información */}
-        <div className="p-6 flex-1 space-y-4">
-          <div>
-            <h2 className="text-2xl font-black text-white">{detail.title}</h2>
-            <p className="text-xs text-slate-400 italic">
+          {/* Título superpuesto elegante en la base del banner */}
+          <div className="absolute bottom-4 left-6 right-6 z-10">
+            <h2 className="text-2xl sm:text-3xl font-black text-white drop-shadow-md">
+              {detail.title}
+            </h2>
+            <p className="text-xs text-slate-300 italic drop-shadow">
               Título Original: {detail.original_title} • 📅{" "}
               {detail.release_date || "N/A"}
             </p>
           </div>
+        </div>
 
+        {/* Cuerpo de Información */}
+        <div className="p-6 space-y-5">
+          {/* Sinopsis */}
           <div className="space-y-1">
             <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
               Sinopsis
@@ -105,32 +130,49 @@ const DetailModal = ({ tmdbId, onClose }: DetailModalProps) => {
             </p>
           </div>
 
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold text-violet-400 uppercase tracking-wider">
-              Reparto Principal
-            </h4>
-            {detail.credits?.cast && detail.credits.cast.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
+          {/* Reparto Principal con Foto y Nombre */}
+          {detail.credits?.cast && detail.credits.cast.length > 0 && (
+            <div className="space-y-2.5">
+              <h4 className="text-xs font-bold text-violet-400 uppercase tracking-wider">
+                Reparto Principal
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {detail.credits.cast.slice(0, 6).map((actor) => (
                   <div
                     key={actor.id}
-                    className="px-2.5 py-1 bg-slate-950/60 border border-slate-800 text-xs rounded-lg flex flex-col sm:flex-row gap-1 items-baseline"
+                    className="p-2 bg-slate-950/60 border border-slate-800/80 rounded-xl flex items-center gap-2.5 hover:border-violet-500/30 transition-colors"
                   >
-                    <span className="font-bold text-slate-200">
-                      {actor.name}
-                    </span>
-                    <span className="text-[10px] text-slate-500 font-medium">
-                      como {actor.character}
-                    </span>
+                    <div className="w-10 h-10 rounded-full bg-slate-800 overflow-hidden shrink-0 border border-slate-700">
+                      {actor.profile_path ? (
+                        <img
+                          src={`https://image.tmdb.org/t/p/w185${actor.profile_path}`}
+                          alt={actor.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs font-bold">
+                          {actor.name?.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Nombre Real y Personaje */}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-slate-200 truncate">
+                        {actor.name}
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate">
+                        {actor.character}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-xs text-slate-500">
-                Información de elenco no disponible.
-              </p>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Plataformas Streaming */}
           <div className="space-y-2">
@@ -142,7 +184,7 @@ const DetailModal = ({ tmdbId, onClose }: DetailModalProps) => {
                 {providers.map((p, idx) => (
                   <span
                     key={idx}
-                    className="px-2 py-1 bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold rounded"
+                    className="px-2.5 py-1 bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold rounded"
                   >
                     {p.provider_name}
                   </span>
@@ -164,7 +206,6 @@ const DetailModal = ({ tmdbId, onClose }: DetailModalProps) => {
               <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-800 bg-black">
                 <iframe
                   className="absolute inset-0 w-full h-full"
-                  // 👇 Esto forzará el formato correcto: https://youtube.com
                   src={`https://youtube.com/embed/${videoKey}`}
                   title="YouTube Video Player"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

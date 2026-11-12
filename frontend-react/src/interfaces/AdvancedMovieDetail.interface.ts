@@ -1,5 +1,6 @@
 export interface AdvancedMovieDetail {
   id: number;
+  backdrop_path: string | null;
   title: string;
   original_title: string;
   overview: string;
@@ -14,6 +15,11 @@ export interface AdvancedMovieDetail {
     };
   };
   credits?: {
-    cast?: Array<{ id: number; name: string; character: string }>;
+    cast?: Array<{
+      id: number;
+      name: string;
+      character: string;
+      profile_path: string | null;
+    }>;
   };
 }
