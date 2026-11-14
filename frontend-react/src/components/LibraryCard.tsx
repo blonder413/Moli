@@ -17,12 +17,13 @@ const LibraryCard = ({
   const [movieDetail, setMovieDetail] = useState<LibraryMovieDetail | null>(
     null,
   );
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   useEffect(() => {
     const loadDetails = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/watched-movies/details/${record.tmdbId}`,
+          `${apiUrl}/watched-movies/details/${record.tmdbId}`,
         );
         setMovieDetail(response.data);
 

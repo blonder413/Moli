@@ -26,6 +26,7 @@ interface PaginationMeta {
 }
 
 export default function App() {
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
   // 🧭 Control de pestañas de navegación ('search' o 'catalog')
   const [currentView, setCurrentView] = useState<"search" | "catalog">(
     "search",
@@ -68,7 +69,7 @@ export default function App() {
     try {
       await fetchMyLibrary(1, "");
       const response = await axios.get<any>(
-        `http://localhost:3000/watched-movies/search`,
+        `${apiUrl}/watched-movies/search`,
         {
           params: { query, includeAdult: includeAdult.toString() },
         },
@@ -88,7 +89,7 @@ export default function App() {
     isWatchedNow: boolean,
   ) => {
     try {
-      await axios.post(`http://localhost:3000/watched-movies`, {
+      await axios.post(`${apiUrl}/watched-movies`, {
         userId: currentUserId,
         tmdbId: movie.tmdbId || (movie as any).id,
         movieTitle: movie.titleSpanish || movie.title || "Película sin título",
@@ -125,7 +126,7 @@ export default function App() {
     setLibraryLoading(true);
     try {
       const response = await axios.get(
-        `http://localhost:3000/watched-movies/user/${currentUserId}`,
+        `${apiUrl}/watched-movies/user/${currentUserId}`,
         {
           params: { page, search: searchStr },
         },

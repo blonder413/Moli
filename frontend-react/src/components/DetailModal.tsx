@@ -10,12 +10,13 @@ interface DetailModalProps {
 const DetailModal = ({ tmdbId, onClose }: DetailModalProps) => {
   const [detail, setDetail] = useState<AdvancedMovieDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   useEffect(() => {
     const loadAdvancedData = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/watched-movies/details/${tmdbId}`,
+          `${apiUrl}/watched-movies/details/${tmdbId}`,
         );
         setDetail(response.data);
       } catch (error) {
