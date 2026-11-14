@@ -97,7 +97,7 @@ export class WatchedMoviesService {
     // 👇 SOLUCON DE RAÍZ: Buscamos directamente en tu tabla local usando comodines SQL
     if (searchTrimmed !== '') {
       queryBuilder.andWhere(
-        '(watchedMovie.movieTitle LIKE :search OR watchedMovie.chosenPlatform LIKE :search OR CAST(watchedMovie.tmdbId AS CHAR) LIKE :search)',
+        '(LOWER(watchedMovie.movieTitle) LIKE LOWER(:search) OR LOWER(watchedMovie.originalTitle) LIKE LOWER(:search))',
         { search: `%${searchTrimmed}%` },
       );
     }
