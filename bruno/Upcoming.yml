@@ -1,0 +1,16 @@
+info:
+  name: Upcoming
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: localhost:3000/watched-movies/upcoming
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

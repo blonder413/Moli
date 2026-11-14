@@ -17,6 +17,16 @@ import { UpdateWatchedMovieDto } from './dto/update-watched-movie.dto';
 export class WatchedMoviesController {
   constructor(private readonly watchedMoviesService: WatchedMoviesService) {}
 
+  @Get('now-playing')
+  getNowPlaying() {
+    return this.watchedMoviesService.getNowPlayingMovies();
+  }
+
+  @Get('upcoming')
+  getUpcoming() {
+    return this.watchedMoviesService.getUpcomingMovies();
+  }
+
   // 🔍 GET /watched-movies/search?query=Batman
   @Get('search')
   searchExternal(
@@ -32,6 +42,8 @@ export class WatchedMoviesController {
   getExternalDetails(@Param('tmdbId', ParseIntPipe) tmdbId: number) {
     return this.watchedMoviesService.getExternalMovieDetails(tmdbId);
   }
+
+
 
   @Post()
   create(@Body() createWatchedMovieDto: CreateWatchedMovieDto) {

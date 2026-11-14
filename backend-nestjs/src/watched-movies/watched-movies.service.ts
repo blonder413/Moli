@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { TmdbSearchResponse } from './interfaces/response.interface';
 import { TmdbMovieDetailResponse } from './interfaces/detail-movie.interface';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class WatchedMoviesService {
@@ -142,5 +143,31 @@ export class WatchedMoviesService {
     const movie = await this.findOne(id);
     await this.watchedMovieRepository.remove(movie);
     return { message: `Movie record with ID ${id} successfully deleted` };
+  }
+
+  async getNowPlayingMovies() {
+    const url = `${this.tmdbApiUrl}/3/movie/now_playing?language=es-MX&page=1`;
+
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${this.tmdbApiToken.trim()}`,
+        Accept: 'application/json',
+      },
+    });
+
+    return response.data.results;
+  }
+
+  async getUpcomingMovies() {
+    const url = `${this.tmdbApiUrl}/3/movie/upcoming?language=es-MX&page=1`;
+
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${this.tmdbApiToken.trim()}`,
+        Accept: 'application/json',
+      },
+    });
+
+    return response.data.results;
   }
 }

@@ -3,20 +3,8 @@ import axios from "axios";
 import LibraryCard from "./components/LibraryCard";
 import DetailModal from "./components/DetailModal";
 import type { WatchedMovieRecord } from "./interfaces/WatchedMovieRecord.interface";
-
-// Interfaz para mapear las respuestas de películas externas
-interface TmdbMovie {
-  tmdbId: number;
-  titleSpanish?: string;
-  title?: string;
-  original_title: string;
-  overview: string;
-  releaseDate?: string;
-  release_date?: string;
-  posterUrl?: string | null;
-  poster_path?: string | null;
-  vote_average: number;
-}
+import type { TmdbMovie } from "./interfaces/TmdbMovie.interface";
+import MovieCard from "./components/MovieCard";
 
 // Interfaz para la metadata del control de paginación
 interface PaginationMeta {
@@ -51,6 +39,10 @@ export default function App() {
     {},
   );
 
+  const [nowPlaying, setNowPlaying] = useState<TmdbMovie[]>([]);
+  const [upcoming, setUpcoming] = useState<TmdbMovie[]>([]);
+  const [discoverLoading, setDiscoverLoading] = useState<boolean>(false);
+
   // Estados de interfaz comunes (Notificación y Ventana de Detalles)
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({
     message: "",
@@ -68,12 +60,9 @@ export default function App() {
     setSearchLoading(true);
     try {
       await fetchMyLibrary(1, "");
-      const response = await axios.get<any>(
-        `${apiUrl}/watched-movies/search`,
-        {
-          params: { query, includeAdult: includeAdult.toString() },
-        },
-      );
+      const response = await axios.get<any>(`${apiUrl}/watched-movies/search`, {
+        params: { query, includeAdult: includeAdult.toString() },
+      });
       const data = response.data.results || response.data;
       setSearchResults(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -163,6 +152,27 @@ export default function App() {
   useEffect(() => {
     fetchMyLibrary(1, localSearch);
   }, [currentView]);
+
+  useEffect(() => {
+    const loadDiscoverMovies = async () => {
+      setDiscoverLoading(true);
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+        const [nowRes, upRes] = await Promise.all([
+          axios.get(`${apiUrl}/watched-movies/now-playing`),
+          axios.get(`${apiUrl}/watched-movies/upcoming`),
+        ]);
+        setNowPlaying(nowRes.data || []);
+        setUpcoming(upRes.data || []);
+      } catch (error) {
+        console.error("Error cargando cartelera:", error);
+      } finally {
+        setDiscoverLoading(false);
+      }
+    };
+    loadDiscoverMovies();
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-indigo-500/30">
       {/* CABECERA Y CONTROL DE VISTAS */}
@@ -232,7 +242,14 @@ export default function App() {
                   onFocus={(e) => e.target.select()}
                   placeholder="Escribe un título..."
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => {
+                      const newValue = e.target.value;
+                      setQuery(newValue);
+
+                      if (!newValue.trim()) {
+                        setSearchResults([]);
+                      }
+                    }}
                   className="w-full sm:w-64 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors"
                 />
                 <button
@@ -265,145 +282,117 @@ export default function App() {
             )}
 
             {!searchLoading && searchResults.length === 0 && (
-              <div className="text-center py-12 bg-slate-900/20 border border-dashed border-slate-800 rounded-2xl">
-                <p className="text-slate-400 mb-1">
-                  No hay películas en pantalla.
-                </p>
-                <p className="text-xs text-slate-500">
-                  Utiliza la barra de búsqueda de la derecha para ver
-                  resultados.
-                </p>
+              <div className="space-y-10">
+                {discoverLoading ? (
+                  <p className="text-center text-slate-400 animate-pulse py-12">
+                    Cargando cartelera y próximos estrenos...
+                  </p>
+                ) : (
+                  <>
+                    {/* SECCIÓN 1: ESTRENOS RECIENTES / EN CARTELERA */}
+                    {nowPlaying.length > 0 && (
+                      <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 shadow-xl space-y-6">
+                        {/* Cabecera enriquecida */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-xl shadow-inner">
+                              🔥
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-black text-white tracking-tight">
+                                Estrenos Recientes y en Cartelera
+                              </h3>
+                              <p className="text-xs text-slate-400">
+                                Las películas más populares disponibles actualmente en cines
+                              </p>
+                            </div>
+                          </div>
+                          <span className="self-start sm:self-center px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-[11px] font-bold uppercase tracking-wider rounded-full">
+                            En Cartelera
+                          </span>
+                        </div>
+
+                        {/* Grilla de películas */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                          {nowPlaying.slice(0, 10).map((movie) => {
+                            const id = movie.tmdbId || movie.id || 0;
+                            const localRecord = myLibrary.find((r) => r.tmdbId === id);
+                            return (
+                              <MovieCard
+                                key={id}
+                                movie={movie}
+                                localRecord={localRecord}
+                                onViewDetails={setSelectedMovieId}
+                                onAddToLibrary={handleAddToLibrary}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SECCIÓN 2: PRÓXIMOS LANZAMIENTOS */}
+                    {upcoming.length > 0 && (
+                      <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 shadow-xl space-y-6">
+                        {/* Cabecera enriquecida */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-xl shadow-inner">
+                              🗓️
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-black text-white tracking-tight">
+                                Próximos Lanzamientos
+                              </h3>
+                              <p className="text-xs text-slate-400">
+                                Títulos confirmados que llegarán muy pronto a la gran pantalla
+                              </p>
+                            </div>
+                          </div>
+                          <span className="self-start sm:self-center px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[11px] font-bold uppercase tracking-wider rounded-full">
+                            Próximamente
+                          </span>
+                        </div>
+
+                        {/* Grilla de películas */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                          {upcoming.slice(0, 10).map((movie) => {
+                            const id = movie.tmdbId || movie.id || 0;
+                            const localRecord = myLibrary.find((r) => r.tmdbId === id);
+                            return (
+                              <MovieCard
+                                key={id}
+                                movie={movie}
+                                localRecord={localRecord}
+                                onViewDetails={setSelectedMovieId}
+                                onAddToLibrary={handleAddToLibrary}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
+
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {searchResults.map((movie) => {
-                const id = movie.tmdbId || (movie as any).id;
-                const title =
-                  movie.titleSpanish || movie.title || "Título Desconocido";
-                const poster = movie.poster_path
-                  ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                  : null;
+                const id = movie.tmdbId || movie.id || 0;
+                const localRecord = myLibrary.find(
+                  (record) => record.tmdbId === id,
+                );
 
                 return (
-                  <div
+                  <MovieCard
                     key={id}
-                    className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg flex flex-col justify-between group"
-                  >
-                    <div className="relative aspect-[2/3] bg-slate-800 overflow-hidden">
-                      {poster ? (
-                        <img
-                          src={poster}
-                          alt={title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-500 text-xs p-2 text-center">
-                          Sin Póster
-                        </div>
-                      )}
-                      {movie.vote_average !== undefined &&
-                        movie.vote_average > 0 && (
-                          <div className="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-md border border-amber-500/30 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-md z-10">
-                            <span className="text-[10px]">⭐</span>
-                            <span className="text-[11px] font-black text-amber-400">
-                              {Number(movie.vote_average).toFixed(1)}
-                            </span>
-                          </div>
-                        )}
-                    </div>
-                    <div className="p-4 flex flex-col gap-2 flex-1 justify-between">
-                      <div className="space-y-2">
-                        {/* Contenedor exclusivo para los títulos: Altura fija y relativo para alineación perfecta */}
-                        <div className="relative h-[40px] flex flex-col justify-center overflow-hidden">
-                          {/* 1. Título en Español */}
-                          <h3
-                            className={`font-bold text-sm text-white transition-all duration-300 leading-tight ${
-                              movie.original_title &&
-                              movie.original_title !== title
-                                ? "group-hover:opacity-0 group-hover:-translate-y-3"
-                                : ""
-                            }`}
-                          >
-                            {title}
-                          </h3>
-
-                          {/* 2. Título Original: Centrado perfectamente de forma absoluta */}
-                          {movie.original_title &&
-                            movie.original_title !== title && (
-                              <h3 className="font-bold text-sm text-indigo-400 absolute inset-x-0 top-1/2 -translate-y-1/2 opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-[-50%] transition-all duration-300 pointer-events-none leading-tight line-clamp-2">
-                                🎬 {movie.original_title}
-                              </h3>
-                            )}
-                        </div>
-
-                        {/* 3. Año de Lanzamiento: Totalmente aislado abajo para que NADA lo empuje ni lo tape */}
-                        <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-800/40">
-                          <span>
-                            📅{" "}
-                            {movie.release_date
-                              ? movie.release_date.split("-")[0]
-                              : "N/A"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedMovieId(id)}
-                          className="w-full py-1 px-2 bg-gradient-to-r from-slate-800 to-slate-900 border border-slate-800 hover:border-indigo-500/40 text-[11px] font-medium text-slate-300 hover:text-indigo-400 rounded flex items-center justify-center gap-1 cursor-pointer"
-                        >
-                          Ver Detalles
-                        </button>
-                        {(() => {
-                          // Buscamos si la película actual ya existe en tu biblioteca local
-                          const localRecord = myLibrary.find(
-                            (record) => record.tmdbId === id,
-                          );
-
-                          if (localRecord) {
-                            // Escenario A: La película ya existe en tu base de datos
-                            return (
-                              <div className="w-full pt-1">
-                                <span
-                                  className={`w-full block py-1.5 px-2 text-center text-[10px] font-bold tracking-wide rounded-md border ${
-                                    localRecord.isWatched
-                                      ? "bg-emerald-950/40 border-emerald-500/30 text-emerald-400"
-                                      : "bg-amber-950/40 border-amber-500/30 text-amber-400"
-                                  }`}
-                                >
-                                  {localRecord.isWatched
-                                    ? "🎉 ¡Ya la viste!"
-                                    : "⏳ En tus pendientes"}
-                                </span>
-                              </div>
-                            );
-                          }
-
-                          // Escenario B: No está registrada, mostramos las dos opciones de guardado tradicionales
-                          return (
-                            <div className="grid grid-cols-2 gap-1.5 pt-1">
-                              <button
-                                type="button"
-                                onClick={() => handleAddToLibrary(movie, false)}
-                                className="py-1 px-1 bg-slate-850 hover:bg-slate-750 font-semibold text-[10px] rounded transition-colors text-center cursor-pointer text-slate-300 active:scale-95 select-none"
-                              >
-                                ⏳ Pendiente
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleAddToLibrary(movie, true)}
-                                className="py-1 px-1 bg-indigo-600 hover:bg-indigo-500 font-semibold text-[10px] rounded transition-colors text-center cursor-pointer text-white active:scale-95 select-none"
-                              >
-                                ✅ La vi
-                              </button>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </div>
+                    movie={movie}
+                    localRecord={localRecord}
+                    onViewDetails={setSelectedMovieId}
+                    onAddToLibrary={handleAddToLibrary}
+                  />
                 );
               })}
             </div>
